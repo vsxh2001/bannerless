@@ -18,8 +18,18 @@ export async function POST(req: NextRequest) {
     return new Response("Invalid signature", { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded"
+  ) {
     const session = event.data.object as Stripe.Checkout.Session;
+
+    // Guard against async/delayed methods that complete the session while
+    // still unpaid — only record dues once Stripe confirms payment.
+    if (session.payment_status !== "paid") {
+      return new Response("ok", { status: 200 });
+    }
+
     const paymentId = session.metadata?.paymentId;
     const intent =
       typeof session.payment_intent === "string"

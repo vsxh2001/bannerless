@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { users, attendance } from "@/db/schema";
@@ -33,11 +34,30 @@ function findMemberIdByPhone(fromDigits: string): string | null {
   return match?.id ?? null;
 }
 
+// Verify Meta's X-Hub-Signature-256 (HMAC-SHA256 of the raw body with the app
+// secret). Enforced only when WHATSAPP_APP_SECRET is set, so local testing
+// without a secret still works.
+function verifySignature(rawBody: string, header: string | null): boolean {
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  if (!secret) return true;
+  if (!header) return false;
+  const expected =
+    "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 // Inbound messages — we care about RSVP button replies.
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+  if (!verifySignature(rawBody, req.headers.get("x-hub-signature-256"))) {
+    return new Response("Invalid signature", { status: 401 });
+  }
+
   let payload: unknown;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody);
   } catch {
     return new Response("ok", { status: 200 });
   }
