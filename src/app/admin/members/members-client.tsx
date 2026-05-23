@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Badge,
   Button,
@@ -157,7 +158,12 @@ export function MemberListRow({ member }: { member: MemberRow }) {
   return (
     <tr className="border-t border-gray-100">
       <td className="px-4 py-3 font-medium text-gray-900">
-        {member.name ?? "—"}
+        <Link
+          href={`/admin/members/${member.id}`}
+          className="text-indigo-600 hover:underline"
+        >
+          {member.name ?? "—"}
+        </Link>
       </td>
       <td className="px-4 py-3 text-gray-600">{member.email}</td>
       <td className="px-4 py-3 text-gray-600">{member.phone ?? "—"}</td>
