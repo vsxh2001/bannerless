@@ -1,0 +1,37 @@
+# fly.toml — Fly.io deployment config for Bannerless.
+#
+# Replace `app` and `primary_region` to match your Fly app. Secrets are NOT set
+# here; use `fly secrets set ...` (see README "Deploy to Fly.io"). Database
+# migrations run at container start via docker-entrypoint.sh — intentionally NOT
+# a [deploy] release_command, because Fly release machines do not mount the app
+# volume, so the SQLite file at DATABASE_URL is only reachable on the app machine.
+
+app = "bannerless"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Point the app + boot-time migrator at the persistent volume (see [mounts]).
+  DATABASE_URL = "/data/app.db"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Keep one machine running so long-lived webhooks (Stripe / WhatsApp) are
+  # always reachable and there is no cold-start on incoming requests.
+  min_machines_running = 1
+
+# Persistent volume holding the SQLite database. Create it once with:
+#   fly volumes create data --size 1
+# A single SQLite writer means a single mounted machine; scale "up" (size), not "out".
+[mounts]
+  source = "data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

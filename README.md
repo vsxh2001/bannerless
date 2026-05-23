@@ -103,3 +103,56 @@ SQLite needs a **persistent filesystem** and the app must stay running to receiv
 webhooks, so deploy to a host with a volume — **Fly.io / Railway / Render**. (For a
 fully managed DB later, swap the driver for **Turso/libSQL**.) Vercel's ephemeral
 serverless filesystem is not suitable for the SQLite file.
+
+## Deploy to Fly.io
+
+This repo ships a multi-stage `Dockerfile`, a `docker-entrypoint.sh`, and a
+`fly.toml` configured for a long-running Node server with a persistent volume.
+The build uses `output: "standalone"` (see `next.config.ts`) for a slim image,
+and **migrations run at container start** in the entrypoint (not a Fly
+`release_command`, since release machines don't mount the app volume).
+
+1. **Install** the [Fly CLI](https://fly.io/docs/flyctl/install/) and `fly auth login`.
+2. **Create the app** (edit `app`/`primary_region` in `fly.toml` first, or let
+   `launch` set them). The bundled `fly.toml` is used as-is:
+   ```bash
+   fly launch --no-deploy
+   ```
+3. **Create the volume** (mounted at `/data`, holds `app.db`):
+   ```bash
+   fly volumes create data --size 1
+   ```
+4. **Set secrets + public config** (replace `<app>` and the values):
+   ```bash
+   fly secrets set \
+     AUTH_SECRET=...                       # npx auth secret / openssl rand -base64 32
+     STRIPE_SECRET_KEY=... \
+     STRIPE_WEBHOOK_SECRET=... \
+     AUTH_RESEND_KEY=... \
+     EMAIL_FROM="Bannerless <onboarding@resend.dev>" \
+     WHATSAPP_TOKEN=... \
+     WHATSAPP_PHONE_NUMBER_ID=... \
+     WHATSAPP_BUSINESS_ACCOUNT_ID=... \
+     WHATSAPP_VERIFY_TOKEN=... \
+     AUTH_URL=https://<app>.fly.dev \
+     NEXT_PUBLIC_BASE_URL=https://<app>.fly.dev \
+     ADMIN_EMAIL=you@example.com
+   ```
+   `DATABASE_URL=/data/app.db` is already set via `fly.toml` `[env]`.
+5. **Deploy.** Migrations apply automatically on boot via the entrypoint:
+   ```bash
+   fly deploy
+   ```
+6. **Seed the first admin** once (uses the `ADMIN_EMAIL` secret), against the
+   volume DB on the running machine:
+   ```bash
+   fly ssh console -C "node node_modules/.bin/tsx src/db/seed.ts"
+   ```
+   `src/db/seed.ts` isn't included in the slim image, so if that path is absent
+   you can instead seed by temporarily setting your email as `ADMIN_EMAIL` and
+   inserting the admin row, or run the seed locally against a copy of the DB.
+   The schema itself is always migrated at boot.
+
+Update the Stripe webhook endpoint to
+`https://<app>.fly.dev/api/webhooks/stripe` and the WhatsApp webhook to
+`https://<app>.fly.dev/api/webhooks/whatsapp` (see **External setup** above).
