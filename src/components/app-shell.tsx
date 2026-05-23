@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { Button } from "@/components/ui";
+import { NavLink } from "@/components/nav-link";
 
 export type NavItem = { href: string; label: string };
 
@@ -16,26 +17,20 @@ export function AppShell({
   return (
     <div className="min-h-screen">
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-6">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/" className="font-bold text-gray-900">
               Bannerless
             </Link>
             <nav className="flex flex-wrap gap-1">
               {nav.map((n) => (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-                >
-                  {n.label}
-                </Link>
+                <NavLink key={n.href} href={n.href} label={n.label} />
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {userEmail && (
-              <span className="hidden text-sm text-gray-400 sm:inline">
+              <span className="hidden max-w-[16rem] truncate text-sm text-gray-400 sm:inline">
                 {userEmail}
               </span>
             )}
