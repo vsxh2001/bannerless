@@ -143,15 +143,10 @@ and **migrations run at container start** in the entrypoint (not a Fly
    ```bash
    fly deploy
    ```
-6. **Seed the first admin** once (uses the `ADMIN_EMAIL` secret), against the
-   volume DB on the running machine:
-   ```bash
-   fly ssh console -C "node node_modules/.bin/tsx src/db/seed.ts"
-   ```
-   `src/db/seed.ts` isn't included in the slim image, so if that path is absent
-   you can instead seed by temporarily setting your email as `ADMIN_EMAIL` and
-   inserting the admin row, or run the seed locally against a copy of the DB.
-   The schema itself is always migrated at boot.
+6. **First admin — no manual step needed.** The entrypoint runs migrations and
+   then idempotently creates (or promotes) the user in the `ADMIN_EMAIL` secret
+   as an admin on every boot. Since you set `ADMIN_EMAIL` in step 4, that account
+   is ready to sign in right after `fly deploy`.
 
 Update the Stripe webhook endpoint to
 `https://<app>.fly.dev/api/webhooks/stripe` and the WhatsApp webhook to
