@@ -58,12 +58,20 @@ export default async function PaymentsPage({
       <PageHeading
         title="Payments"
         action={
-          <form action={sendPaymentReminders}>
-            <input type="hidden" name="period" value={period} />
-            <Button type="submit" variant="secondary">
-              Send reminders to unpaid
-            </Button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/admin/payments/export"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Export CSV
+            </a>
+            <form action={sendPaymentReminders}>
+              <input type="hidden" name="period" value={period} />
+              <Button type="submit" variant="secondary">
+                Send reminders to unpaid
+              </Button>
+            </form>
+          </div>
         }
       />
 
