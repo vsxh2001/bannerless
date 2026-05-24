@@ -75,6 +75,34 @@ export function buildRsvpButtonsPayload(
   };
 }
 
+export function buildTemplatePayload(
+  to: string,
+  templateName: string,
+  languageCode: string,
+  bodyParams: string[] = [],
+) {
+  return {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: normalizePhoneDigits(to),
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: languageCode },
+      ...(bodyParams.length
+        ? {
+            components: [
+              {
+                type: "body",
+                parameters: bodyParams.map((t) => ({ type: "text", text: t })),
+              },
+            ],
+          }
+        : {}),
+    },
+  };
+}
+
 async function send(payload: object): Promise<void> {
   if (!isWhatsappConfigured()) {
     throw new Error("WhatsApp is not configured");
@@ -103,4 +131,13 @@ export async function sendRsvpButtons(
   sessionId: string,
 ): Promise<void> {
   await send(buildRsvpButtonsPayload(to, body, sessionId));
+}
+
+export async function sendTemplate(
+  to: string,
+  templateName: string,
+  languageCode: string,
+  bodyParams?: string[],
+): Promise<void> {
+  await send(buildTemplatePayload(to, templateName, languageCode, bodyParams ?? []));
 }

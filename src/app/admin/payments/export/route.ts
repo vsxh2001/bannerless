@@ -4,13 +4,20 @@ import { db } from "@/db";
 import { payments, users } from "@/db/schema";
 
 /**
- * Escape a value for inclusion in a CSV cell. Always wraps the value in double
- * quotes and doubles any embedded double quotes, which safely handles commas,
- * quotes and newlines inside fields (e.g. member names like
- * `O'Brien, Jr. "Bob"`, which stays a single field).
+ * Escape a value for inclusion in a CSV cell. Wraps the value in double quotes
+ * and doubles any embedded double quotes, which safely handles commas, quotes
+ * and newlines inside fields (e.g. member names like `O'Brien, Jr. "Bob"`,
+ * which stays a single field).
+ *
+ * Also neutralizes spreadsheet formula injection: a field beginning with
+ * `= + - @` or a control char is rendered as a live formula by Excel/Sheets,
+ * so prefix those with a single quote.
  */
 function csvCell(value: string | number | null | undefined): string {
-  const str = value == null ? "" : String(value);
+  let str = value == null ? "" : String(value);
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
   return `"${str.replace(/"/g, '""')}"`;
 }
 

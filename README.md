@@ -85,6 +85,24 @@ See `.env.example`. Summary:
      must use an **approved message template**.
    - Members must have opted in to receive messages.
 
+#### WhatsApp message templates
+
+Because free-form and interactive messages only deliver inside the **24-hour
+customer-service window**, a weekly reminder sent proactively (the normal case)
+will silently fail unless it uses an **approved message template**.
+
+1. In **WhatsApp Manager → Account tools → Message templates**, create and submit
+   a template for review. Give the body two parameters, e.g.
+   `Training on {{1}} at {{2}}. See you there!` (`{{1}}` = date, `{{2}}` =
+   location).
+2. Once Meta approves it, set `WHATSAPP_REMINDER_TEMPLATE` to the template's
+   **name** and `WHATSAPP_TEMPLATE_LANG` to its **language code** (e.g. `en_US`).
+
+With these set, "Send reminder" delivers the template to every active member with
+a phone — even outside the 24h window. Without `WHATSAPP_REMINDER_TEMPLATE`, the
+reminder falls back to interactive RSVP buttons, which only reach members who
+have messaged your number in the last 24 hours.
+
 ## Scripts
 
 | Command | Description |

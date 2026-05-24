@@ -10,9 +10,11 @@ import { requireAdmin } from "@/lib/auth-helpers";
 import {
   isWhatsappConfigured,
   sendRsvpButtons,
+  sendTemplate,
   sendText,
 } from "@/lib/whatsapp";
 import { sessionReminderText, participantsSummaryText } from "@/lib/messages";
+import { formatDateTime } from "@/lib/utils";
 
 export type ActionResult = { ok: boolean; error?: string };
 
@@ -137,6 +139,7 @@ export async function sendReminder(formData: FormData): Promise<void> {
     redirect(`/admin/sessions/${id}?wa=notconfigured`);
   }
 
+  const template = process.env.WHATSAPP_REMINDER_TEMPLATE;
   const body = sessionReminderText({
     date: session.date,
     location: session.location,
@@ -146,7 +149,18 @@ export async function sendReminder(formData: FormData): Promise<void> {
   for (const m of activeMembersWithPhone()) {
     if (!m.phone) continue;
     try {
-      await sendRsvpButtons(m.phone, body, id);
+      if (template) {
+        // Proactive (outside the 24h window): send an approved template.
+        await sendTemplate(
+          m.phone,
+          template,
+          process.env.WHATSAPP_TEMPLATE_LANG ?? "en",
+          [formatDateTime(session.date), session.location ?? "TBD"],
+        );
+      } else {
+        // 24h-window path: interactive RSVP buttons.
+        await sendRsvpButtons(m.phone, body, id);
+      }
       sent += 1;
     } catch {
       failed += 1;

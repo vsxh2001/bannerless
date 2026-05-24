@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRsvpButtonsPayload,
+  buildTemplatePayload,
   normalizePhoneDigits,
   parseRsvpButtonId,
   rsvpButtonId,
@@ -37,5 +38,33 @@ describe("whatsapp", () => {
       "rsvp_maybe_s1",
       "rsvp_no_s1",
     ]);
+  });
+
+  it("builds a template payload with mapped body parameters", () => {
+    const payload = buildTemplatePayload(
+      "+972500000001",
+      "session_reminder",
+      "en_US",
+      ["Tue 26 May", "City Park"],
+    );
+    expect(payload.to).toBe("972500000001");
+    expect(payload.type).toBe("template");
+    expect(payload.template.name).toBe("session_reminder");
+    expect(payload.template.language.code).toBe("en_US");
+    expect(payload.template.components).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: "Tue 26 May" },
+          { type: "text", text: "City Park" },
+        ],
+      },
+    ]);
+  });
+
+  it("omits components when there are no body parameters", () => {
+    const payload = buildTemplatePayload("+972500000001", "hello_world", "en_US");
+    expect(payload.type).toBe("template");
+    expect("components" in payload.template).toBe(false);
   });
 });
