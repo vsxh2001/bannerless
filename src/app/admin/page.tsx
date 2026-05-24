@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { trainingSessions, attendance, payments, users } from "@/db/schema";
 import { PageHeading } from "@/components/app-shell";
@@ -48,6 +48,42 @@ export default async function AdminOverviewPage() {
     going = Number(r?.c ?? 0);
   }
 
+  const upcomingRow = db
+    .select({ c: sql<number>`count(*)` })
+    .from(trainingSessions)
+    .where(
+      and(
+        gte(trainingSessions.date, now),
+        eq(trainingSessions.status, "scheduled"),
+      ),
+    )
+    .get();
+  const upcomingCount = Number(upcomingRow?.c ?? 0);
+
+  const recentPastSessions = db
+    .select({ id: trainingSessions.id })
+    .from(trainingSessions)
+    .where(lt(trainingSessions.date, now))
+    .orderBy(desc(trainingSessions.date))
+    .limit(5)
+    .all();
+  let avgAttendance = "—";
+  if (recentPastSessions.length > 0) {
+    const ids = recentPastSessions.map((s) => s.id);
+    const attendedRow = db
+      .select({ c: sql<number>`count(*)` })
+      .from(attendance)
+      .where(
+        and(
+          inArray(attendance.sessionId, ids),
+          eq(attendance.attended, true),
+        ),
+      )
+      .get();
+    const totalAttended = Number(attendedRow?.c ?? 0);
+    avgAttendance = (totalAttended / recentPastSessions.length).toFixed(1);
+  }
+
   const periodPayments = db
     .select()
     .from(payments)
@@ -62,6 +98,24 @@ export default async function AdminOverviewPage() {
   return (
     <>
       <PageHeading title="Overview" />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Active members", value: String(memberCount) },
+          { label: "Upcoming sessions", value: String(upcomingCount) },
+          { label: "Avg attendance (last 5)", value: avgAttendance },
+          { label: "Paid this month", value: `${paidCount}/${memberCount}` },
+        ].map((stat) => (
+          <Card key={stat.label}>
+            <CardBody>
+              <p className="text-sm text-gray-500">{stat.label}</p>
+              <p className="mt-1 text-2xl font-semibold text-gray-900">
+                {stat.value}
+              </p>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
